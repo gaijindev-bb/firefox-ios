@@ -1,0 +1,52 @@
+# Timeboxed Domato DOM-fuzz loop against the latest Firefox Nightly on a
+# macos-15 runner. Generates samples with the public Domato generator, drives
+# Nightly headless at each case (20s timeout), and uploads crash candidates.
+name: domato-fuzz
+on:
+  workflow_dispatch:
+
+jobs:
+  domato-fuzz:
+    runs-on: macos-15
+    timeout-minutes: 330
+    env:
+      WORK: ${{ github.workspace }}/fuzzwork
+    steps:
+      - name: Clone Domato
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/googleprojectzero/domato.git "$GITHUB_WORKSPACE/domato"
+          git -C "$GITHUB_WORKSPACE/domato" rev-parse HEAD | tee domato-commit.txt
+
+      - name: Materialize harness
+        run: |
+          set -euxo pipefail
+          mkdir -p fuzz
+          echo 'aW1wb3J0IGdsb2IsIG9zLCBzaHV0aWwsIHN1YnByb2Nlc3MsIHN5cywgdGltZQoKIyBDSSBhZGFwdGF0aW9uIG9mIGh1YidzIGZpeGVkIHJ1bm5lciAocXVldWUtZGlyLWFzLWRlZHVwOyBmaWxlcyBNT1ZFRCBPVVQgYWZ0ZXIKIyBwcm9jZXNzaW5nIC0gYSBgc2VlbmAgc2V0IHNpbGVudGx5IHNraXBzIGV2ZXJ5dGhpbmcgYmVjYXVzZSBEb21hdG8gcmVzdGFydHMgaXRzCiMgZmlsZW5hbWUgbnVtYmVyaW5nIGV2ZXJ5IGdlbmVyYXRpb24gY2FsbCkuIFBhdGhzL3RpbWVib3ggY29tZSBmcm9tIGFyZ3Y6CiMgICBydW5uZXIucHkgPGZpcmVmb3hfYmluPiA8cHJvZmlsZT4gPHdvcmtkaXI+IDxkb21hdG9fZ2VuZXJhdG9yPiA8dGltZWJveF9taW4+CkZYLCBQUk9GSUxFLCBXT1JLLCBET01BVE8gPSBzeXMuYXJndlsxXSwgc3lzLmFyZ3ZbMl0sIHN5cy5hcmd2WzNdLCBzeXMuYXJndls0XQpCT1ggPSBmbG9hdChzeXMuYXJndls1XSkgKiA2MCBpZiBsZW4oc3lzLmFyZ3YpID4gNSBlbHNlIDE2MjAwCkNBU0VTLCBDUkFTSEVTLCBET05FID0gKG9zLnBhdGguam9pbihXT1JLLCBkKSBmb3IgZCBpbiAoImNhc2VzIiwgImNyYXNoZXMiLCAiZG9uZSIpKQpmb3IgZCBpbiAoQ0FTRVMsIENSQVNIRVMsIERPTkUpOiBvcy5tYWtlZGlycyhkLCBleGlzdF9vaz1UcnVlKQpUSU1FT1VULCBCQVRDSCA9IDIwLCA1MApTVEFSVCA9IHRpbWUudGltZSgpCgplbnYgPSBkaWN0KG9zLmVudmlyb24pCmVudlsiTU9aX0hFQURMRVNTIl0gPSAiMSIKZW52WyJBU0FOX09QVElPTlMiXSA9ICJkZXRlY3RfbGVha3M9MDphYm9ydF9vbl9lcnJvcj0xOnN5bWJvbGl6ZT0xOmhhbmRsZV9zZWd2PTE6aGFuZGxlX2Fib3J0PTEiCmVudlsiTFNBTl9PUFRJT05TIl0gPSAiZGV0ZWN0X2xlYWtzPTAiCgpkZWYgZ2VuKG4pOgogICAgc3VicHJvY2Vzcy5ydW4oWyJweXRob24zIiwgRE9NQVRPLCAiLS1vdXRwdXRfZGlyIiwgQ0FTRVMsICItLW5vX29mX2ZpbGVzIiwgc3RyKG4pXSwKICAgICAgICAgICAgICAgICAgIHN0ZG91dD1zdWJwcm9jZXNzLkRFVk5VTEwsIHN0ZGVycj1zdWJwcm9jZXNzLkRFVk5VTEwsIHRpbWVvdXQ9MzAwKQoKZGVmIHJ1bl9jYXNlKHBhdGgpOgogICAgbG9nID0gcGF0aCArICIubG9nIgogICAgd2l0aCBvcGVuKGxvZywgInciKSBhcyBsZjoKICAgICAgICB0cnk6CiAgICAgICAgICAgIHAgPSBzdWJwcm9jZXNzLnJ1bihbRlgsICItcHJvZmlsZSIsIFBST0ZJTEUsICItbm8tcmVtb3RlIiwgIi0taGVhZGxlc3MiLCAiZmlsZTovLyIgKyBwYXRoXSwKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIHN0ZG91dD1sZiwgc3RkZXJyPXN1YnByb2Nlc3MuU1RET1VULCB0aW1lb3V0PVRJTUVPVVQsIGVudj1lbnYpCiAgICAgICAgICAgIHJjID0gcC5yZXR1cm5jb2RlCiAgICAgICAgZXhjZXB0IHN1YnByb2Nlc3MuVGltZW91dEV4cGlyZWQ6CiAgICAgICAgICAgIHJjID0gInRpbWVvdXQiCiAgICB0cnk6CiAgICAgICAgd2l0aCBvcGVuKGxvZywgZXJyb3JzPSJyZXBsYWNlIikgYXMgbGY6CiAgICAgICAgICAgIGRhdGEgPSBsZi5yZWFkKCkKICAgIGV4Y2VwdCBPU0Vycm9yOgogICAgICAgIGRhdGEgPSAiIgogICAgIyBUcmlhZ2UgcnVsZTogY3Jhc2ggaWZmIHNhbml0aXplciBzaWduYXR1cmUgaW4gbG9nIE9SIHNpZ25hbCBkZWF0aCAocmMgPCAwKS4KICAgICMgQSB0aW1lb3V0IGlzIE5PVCBhIGNyYXNoLiBPbiBub24tQVNBTiBidWlsZHMgdGhlIGZpcnN0IGNsYXVzZSBzaW1wbHkgbmV2ZXIKICAgICMgZmlyZXM7IHNpZ25hbCBkZWF0aCBhbmQgY3Jhc2gtcmVwb3J0IGRlbHRhcyBjYXJyeSB0aGUgc2lnbmFsLgogICAgY3Jhc2hlZCA9ICgiQWRkcmVzc1Nhbml0aXplciIgaW4gZGF0YSkgb3IgKGlzaW5zdGFuY2UocmMsIGludCkgYW5kIHJjIDwgMCkKICAgIHJldHVybiBjcmFzaGVkLCByYywgZGF0YVstNDAwMDpdCgpkZWYgbWFpbigpOgogICAgcm91bmRfbiwgZXhlY3V0ZWQgPSAwLCAwCiAgICB3aGlsZSB0aW1lLnRpbWUoKSAtIFNUQVJUIDwgQk9YOgogICAgICAgIHBlbmRpbmcgPSBzb3J0ZWQoZ2xvYi5nbG9iKENBU0VTICsgIi8qLmh0bWwiKSkKICAgICAgICBpZiBub3QgcGVuZGluZzoKICAgICAgICAgICAgcm91bmRfbiArPSAxCiAgICAgICAgICAgIHByaW50KGYiW3J1bm5lcl0gZ2VuZXJhdGluZyBiYXRjaCB7cm91bmRfbn0iLCBmbHVzaD1UcnVlKQogICAgICAgICAgICBnZW4oQkFUQ0gpCiAgICAgICAgICAgIGNvbnRpbnVlCiAgICAgICAgZm9yIGNhc2UgaW4gcGVuZGluZzoKICAgICAgICAgICAgaWYgdGltZS50aW1lKCkgLSBTVEFSVCA+PSBCT1g6IGJyZWFrCiAgICAgICAgICAgIGlmIG5vdCBvcy5wYXRoLmV4aXN0cyhjYXNlKTogY29udGludWUKICAgICAgICAgICAgY3Jhc2hlZCwgcmMsIHRhaWwgPSBydW5fY2FzZShjYXNlKQogICAgICAgICAgICBleGVjdXRlZCArPSAxCiAgICAgICAgICAgIHRhZyA9ICJDUkFTSCIgaWYgY3Jhc2hlZCBlbHNlICJvayIKICAgICAgICAgICAgcHJpbnQoZiJbcnVubmVyXSB7b3MucGF0aC5iYXNlbmFtZShjYXNlKX0gcmM9e3JjfSB7dGFnfSIsIGZsdXNoPVRydWUpCiAgICAgICAgICAgIGlmIGNyYXNoZWQ6CiAgICAgICAgICAgICAgICBkc3QgPSBvcy5wYXRoLmpvaW4oQ1JBU0hFUywgb3MucGF0aC5iYXNlbmFtZShjYXNlKSArICIuIiArIHN0cihpbnQodGltZS50aW1lKCkpKSkKICAgICAgICAgICAgICAgIHNodXRpbC5jb3B5KGNhc2UsIGRzdCkKICAgICAgICAgICAgICAgIHdpdGggb3Blbihkc3QgKyAiLmxvZyIsICJ3IikgYXMgZjogZi53cml0ZSh0YWlsKQogICAgICAgICAgICAgICAgcHJpbnQoZiJbcnVubmVyXSBDUkFTSCBjYXB0dXJlZDoge2RzdH0iLCBmbHVzaD1UcnVlKQogICAgICAgICAgICBzaHV0aWwubW92ZShjYXNlLCBvcy5wYXRoLmpvaW4oRE9ORSwgb3MucGF0aC5iYXNlbmFtZShjYXNlKSArICIuIiArIHN0cihpbnQodGltZS50aW1lKCkpKSkpCiAgICAgICAgICAgIHRyeTogb3MucmVtb3ZlKGNhc2UgKyAiLmxvZyIpCiAgICAgICAgICAgIGV4Y2VwdCBPU0Vycm9yOiBwYXNzCiAgICBwcmludChmIltydW5uZXJdIHRpbWVib3ggcmVhY2hlZDoge2V4ZWN1dGVkfSBjYXNlcyBleGVjdXRlZCwgIgogICAgICAgICAgZiJ7bGVuKG9zLmxpc3RkaXIoQ1JBU0hFUykpfSBjcmFzaGVzIGNhcHR1cmVkIiwgZmx1c2g9VHJ1ZSkKCmlmIF9fbmFtZV9fID09ICJfX21haW5fXyI6CiAgICBtYWluKCkK' | base64 -d > fuzz/runner.py
+      - name: Download latest Firefox Nightly
+        timeout-minutes: 15
+        run: |
+          set -euxo pipefail
+          curl -L 'https://download.mozilla.org/?product=firefox-nightly-latest-ssl&os=osx&lang=en-US' -o /tmp/nightly.dmg
+          hdiutil attach /tmp/nightly.dmg -nobrowse -readonly
+          ls /Volumes/
+          cp -R "/Volumes/Firefox Nightly/Firefox Nightly.app" "$GITHUB_WORKSPACE/Firefox Nightly.app"
+          hdiutil detach "/Volumes/Firefox Nightly" || true
+          "$GITHUB_WORKSPACE/Firefox Nightly.app/Contents/MacOS/firefox" --version
+      - name: Run fuzz loop
+        timeout-minutes: 290
+        run: |
+          set -ux
+          mkdir -p "$WORK/profile"
+          python3 fuzz/runner.py "$GITHUB_WORKSPACE/Firefox Nightly.app/Contents/MacOS/firefox" "$WORK/profile" "$WORK" "$GITHUB_WORKSPACE/domato/generator.py" 270 2>&1 | tee evidence-fuzz.log
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: domato-fuzz-evidence
+          path: |
+            fuzzwork/crashes/
+            evidence-fuzz.log
+            domato-commit.txt
+          if-no-files-found: warn
