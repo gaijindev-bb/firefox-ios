@@ -23,10 +23,11 @@ jobs:
           echo 'IyEvYmluL2Jhc2gKIyBSb3cgMzogY3VzdG9tLXNjaGVtZSBkZWVwbGluayBsYW5kaW5nIGJlaGF2aW9yIGFjcm9zcyBhcHAgc3RhdGVzLgojIEFyZ3M6IGJ1bmRsZV9pZCBzY2hlbWUgZXZpZGVuY2VfZGlyCnNldCAtdXgKQlVORExFX0lEPSIkMSIKU0NIRU1FPSIkMiIKRVZJRD0iJDMiCkxPRz0iJEVWSUQvcm93M190aW1pbmcubG9nIgpETD0iJFNDSEVNRTovL29wZW4tdXJsP3VybD1odHRwcyUzQSUyRiUyRmV4YW1wbGUuY29tJTJGZGVlcGxpbmstdGFyZ2V0IgoKc2hvdCgpIHsgeGNydW4gc2ltY3RsIGlvIGJvb3RlZCBzY3JlZW5zaG90ICIkRVZJRC8kMS5wbmciIHx8IHRydWU7IH0KCmVjaG8gIj09IENPTEQgU1RBUlQgPT0iIHwgdGVlIC1hICIkTE9HIgp4Y3J1biBzaW1jdGwgdGVybWluYXRlIGJvb3RlZCAiJEJVTkRMRV9JRCIgMj4vZGV2L251bGwgfHwgdHJ1ZQpzbGVlcCAyCmVjaG8gIm9wZW51cmwgaXNzdWVkIGF0ICQoZGF0ZSArJXMuJU4pIiB8IHRlZSAtYSAiJExPRyIKeGNydW4gc2ltY3RsIG9wZW51cmwgYm9vdGVkICIkREwiCmZvciBpIGluICQoc2VxIDEgNDApOyBkbwogIGlmIHhjcnVuIHNpbWN0bCBzcGF3biBib290ZWQgbGF1bmNoY3RsIGxpc3QgMj4vZGV2L251bGwgfCBncmVwIC1xICIkQlVORExFX0lEIjsgdGhlbgogICAgZWNobyAicHJvY2VzcyB2aXNpYmxlIGFmdGVyIH4kKChpIC8gMikpcyIgfCB0ZWUgLWEgIiRMT0ciCiAgICBicmVhawogIGZpCiAgc2xlZXAgMC41CmRvbmUKc2xlZXAgNQpzaG90IHJvdzNfY29sZAoKZWNobyAiPT0gV0FSTSAoZm9yZWdyb3VuZCkgPT0iIHwgdGVlIC1hICIkTE9HIgp4Y3J1biBzaW1jdGwgbGF1bmNoIGJvb3RlZCAiJEJVTkRMRV9JRCIgPi9kZXYvbnVsbCAyPiYxIHx8IHRydWUKc2xlZXAgMwplY2hvICJvcGVudXJsIGlzc3VlZCBhdCAkKGRhdGUgKyVzLiVOKSIgfCB0ZWUgLWEgIiRMT0ciCnhjcnVuIHNpbWN0bCBvcGVudXJsIGJvb3RlZCAiJERMIgpzbGVlcCA1CnNob3Qgcm93M193YXJtCgplY2hvICI9PSBCQUNLR1JPVU5ERUQgKGFub3RoZXIgYXBwIGZvcmVncm91bmQpID09IiB8IHRlZSAtYSAiJExPRyIKeGNydW4gc2ltY3RsIGxhdW5jaCBib290ZWQgY29tLmFwcGxlLm1vYmlsZXNhZmFyaSA+L2Rldi9udWxsIDI+JjEgfHwgdHJ1ZQpzbGVlcCAyCmVjaG8gIm9wZW51cmwgaXNzdWVkIGF0ICQoZGF0ZSArJXMuJU4pIiB8IHRlZSAtYSAiJExPRyIKeGNydW4gc2ltY3RsIG9wZW51cmwgYm9vdGVkICIkREwiCnNsZWVwIDUKc2hvdCByb3czX2JhY2tncm91bmQK' | base64 -d > scripts/row3_deeplink.sh
           chmod +x scripts/*.sh
 
-      - name: Select latest Xcode
+      - name: Select Xcode 16.2 (upstream-pinned)
         run: |
           set -euxo pipefail
-          XCODE=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          sudo rm -rf /Applications/Xcode.app || true
+          XCODE=$(ls -d /Applications/Xcode_16.2.app /Applications/Xcode_16*.app 2>/dev/null | sort -V | head -1)
           echo "Selecting $XCODE"
           sudo xcode-select -s "$XCODE/Contents/Developer"
           xcodebuild -version
@@ -45,18 +46,21 @@ jobs:
           brew install fxios
           cd "$FI_DIR"
           fxios bootstrap
+          ./bootstrap.sh focus || true
+          ./bootstrap.sh firefox --force
 
       - name: Build Fennec (iOS Simulator)
         timeout-minutes: 180
         run: |
           set -euxo pipefail
           cd "$FI_DIR/firefox-ios"
-          xcodebuild -resolvePackageDependencies -onlyUsePackageVersionsFromResolvedFile || true
-          xcodebuild -project Client.xcodeproj -scheme Fennec -configuration Fennec \
-            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY= \
-            COMPILER_INDEX_STORE_ENABLE=NO -skipMacroValidation \
-            -derivedDataPath "$FI_DIR/DerivedData" build 2>&1 | tee "$GITHUB_WORKSPACE/xcodebuild_fennec.log"
+          xcodebuild -resolvePackageDependencies -onlyUsePackageVersionsFromResolvedFile
+          xcodebuild build-for-testing -scheme Fennec -target Client \
+            -derivedDataPath "$FI_DIR/DerivedData" \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.2' \
+            COMPILER_INDEX_STORE_ENABLE=NO CODE_SIGN_IDENTITY= \
+            CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO ARCHS="arm64" \
+            2>&1 | tee "$GITHUB_WORKSPACE/xcodebuild_fennec.log"
           ls "$FI_DIR"/DerivedData/Build/Products/
 
       - name: Record source snippets
