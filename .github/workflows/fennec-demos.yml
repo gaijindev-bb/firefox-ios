@@ -64,9 +64,9 @@ jobs:
           cd "$FI_DIR/firefox-ios"
           # First resolve fetches remote checkouts; their manifests may also
           # declare newer swift-tools-version, so patch them and resolve again.
-          xcodebuild -resolvePackageDependencies -onlyUsePackageVersionsFromResolvedFile -derivedDataPath "$FI_DIR/DerivedData" || true
+          xcodebuild -resolvePackageDependencies -onlyUsePackageVersionsFromResolvedFile -project Client.xcodeproj -scheme Fennec -derivedDataPath "$FI_DIR/DerivedData" || true
           python3 "$GITHUB_WORKSPACE/scripts/backport_swiftpm.py" "$FI_DIR/DerivedData" || true
-          xcodebuild -resolvePackageDependencies -onlyUsePackageVersionsFromResolvedFile -derivedDataPath "$FI_DIR/DerivedData"
+          xcodebuild -resolvePackageDependencies -onlyUsePackageVersionsFromResolvedFile -project Client.xcodeproj -scheme Fennec -derivedDataPath "$FI_DIR/DerivedData"
           xcodebuild build-for-testing -scheme Fennec -target Client \
             -derivedDataPath "$FI_DIR/DerivedData" \
             -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.2' \
