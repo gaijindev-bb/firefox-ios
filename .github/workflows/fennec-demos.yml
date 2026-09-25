@@ -86,6 +86,7 @@ jobs:
           xcodebuild build-for-testing -scheme Fennec -target Client \
             -derivedDataPath "$FI_DIR/DerivedData" \
             -destination "platform=iOS Simulator,id=$BUILD_UDID" \
+            -skipMacroValidation -skipPackagePluginValidation \
             COMPILER_INDEX_STORE_ENABLE=NO CODE_SIGN_IDENTITY= \
             CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO ARCHS="arm64" \
             2>&1 | tee "$GITHUB_WORKSPACE/xcodebuild_fennec.log"
