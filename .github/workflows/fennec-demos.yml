@@ -41,6 +41,7 @@ jobs:
         run: |
           set -euxo pipefail
           brew tap mozilla-mobile/fxios
+          brew trust mozilla-mobile/fxios
           brew install fxios
           cd "$FI_DIR"
           fxios bootstrap
