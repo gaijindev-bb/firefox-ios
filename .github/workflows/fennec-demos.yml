@@ -67,11 +67,21 @@ jobs:
           # declare newer swift-tools-version, so patch them and resolve again.
           xcodebuild -resolvePackageDependencies -onlyUsePackageVersionsFromResolvedFile -project Client.xcodeproj -scheme Fennec -derivedDataPath "$FI_DIR/DerivedData" || true
           python3 "$GITHUB_WORKSPACE/scripts/backport_swiftpm.py" "$FI_DIR/DerivedData" || true
-          xcodebuild -resolvePackageDependencies -onlyUsePackageVersionsFromResolvedFile -project Client.xcodeproj -scheme Fennec -derivedDataPath "$FI_DIR/DerivedData"
+          if ! xcodebuild -resolvePackageDependencies -onlyUsePackageVersionsFromResolvedFile -project Client.xcodeproj -scheme Fennec -derivedDataPath "$FI_DIR/DerivedData"; then
+            echo "[diag] post-backport resolve failed; retrying once after 20s"
+            sleep 20
+            xcodebuild -resolvePackageDependencies -onlyUsePackageVersionsFromResolvedFile -project Client.xcodeproj -scheme Fennec -derivedDataPath "$FI_DIR/DerivedData"
+          fi
           # Runner images no longer ship the pinned iOS 18.2 simulator runtime,
           # so create a build destination on the newest runtime compatible with
           # the selected Xcode's simulator SDK (see pick_sim.py).
-          BUILD_UDID=$(python3 "$GITHUB_WORKSPACE/scripts/pick_sim.py" CIBuildSim)
+          if ! BUILD_UDID=$(python3 "$GITHUB_WORKSPACE/scripts/pick_sim.py" CIBuildSim); then
+            echo "[diag] pick_sim failed; dumping simulator state for diagnosis"
+            xcodebuild -version || true
+            xcrun --sdk iphonesimulator --show-sdk-version || true
+            xcrun simctl list runtimes || true
+            exit 1
+          fi
           echo "build simulator: $BUILD_UDID"
           xcodebuild build-for-testing -scheme Fennec -target Client \
             -derivedDataPath "$FI_DIR/DerivedData" \
